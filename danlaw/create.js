@@ -187,16 +187,12 @@ async function geoFencing(deviceId, location, timestamp) {
     await checkEnterKipling(deviceId, location, timestamp);
   } else if (lastEventLocation === "kipling" && lastEventType === "enter") {
     await checkLeaveKipling(deviceId, location, timestamp);
-    await checkEnterIkea(deviceId, location, timestamp);
   } else if (lastEventLocation === "kipling" && lastEventType === "leave") {
     await checkEnterIkea(deviceId, location, timestamp);
-    await checkLeaveIkea(deviceId, location, timestamp);
   } else if (lastEventLocation === "ikea" && lastEventType === "enter") {
     await checkLeaveIkea(deviceId, location, timestamp);
-    await checkEnterKipling(deviceId, location, timestamp);
   } else if (lastEventLocation === "ikea" && lastEventType === "leave") {
     await checkEnterKipling(deviceId, location, timestamp);
-    await checkLeaveKipling(deviceId, location, timestamp);
   } else {
     console.log(
       `invalid state: location: ${lastEventLocation}, type: ${lastEventType}`
