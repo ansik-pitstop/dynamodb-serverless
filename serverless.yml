@@ -19,7 +19,7 @@ service: ikea-bus-tracking-api # NOTE: update this with your service name
 
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   stage: production
   region: us-east-1
   iamRoleStatements:
@@ -35,17 +35,29 @@ provider:
 
 functions:
   getTrackingEvents:
+    environment:
+      CONF_PATH: ./conf.json
     handler: danlaw/list.list
     events:
       - http:
           path: getTrackingEvents
           method: get
           cors: true
-
   postTrackingEvent:
+    environment:
+      CONF_PATH: ./conf.json
     handler: danlaw/create.create
     events:
       - http:
           path: postTrackingEvent
           method: post
+          cors: true
+  getArrivalTime:
+    environment:
+      CONF_PATH: ./conf.json
+    handler: danlaw/getArrivalTime.getArrivalTime
+    events:
+      - http:
+          path: getArrivalTime
+          method: get
           cors: true
