@@ -1,62 +1,18 @@
 "use strict";
 
-const AWS = require("aws-sdk");
 const geolib = require("geolib");
 const Promise = require("bluebird");
 const _ = require("lodash");
-const axios = require("axios");
 const moment = require("moment");
-const ConfigurationLoader = require("@ansik/sdk/dist/lib/configurationLoader").ConfigurationLoader;
-const configurationDefinition = require("../configurationRecords").records;
+const GoogleMaps = require("@google/maps");
 
-let geoLocations = null;
-let conf = null;
-let dynamoDb = null;
-
-AWS.config.setPromisesDependency(Promise);
-
-async function init() {
-  let reloadConf = process.env["RELOAD"];
-
-  if (!conf || reloadConf) {
-    console.log("loading configuration");
-    const configurationLoader = new ConfigurationLoader();
-    const confPath = process.env["CONF_PATH"];
-    if (confPath) {
-      conf = await configurationLoader.loadFrom(configurationDefinition, confPath);
-    } else {
-      conf = configurationLoader.load(configurationDefinition);
-    }
-    console.log("configuration loaded");
-  }
-
-  if (reloadConf || conf.get("aws.region")) {
-    AWS.config.update({ region: conf.get("aws.region") });
-    console.log("aws region set: ", conf.get("aws.region"));
-  }
-
-  if (!geoLocations || reloadConf) {
-    console.log("loading geolocation data");
-    geoLocations = (await axios.get(conf.get("geolocationUrl"))).data.data;
-    _.each(
-      geoLocations,
-      location =>
-        (location.geofencing = _.map(location.geofencing, point => ({ latitude: point[0], longitude: point[1] })))
-    );
-
-    console.log("geolocation data loaded");
-    console.log(JSON.stringify(geoLocations));
-  }
-
-  if (!dynamoDb || reloadConf) {
-    console.log("create new dynamoDB instance");
-    dynamoDb = new AWS.DynamoDB.DocumentClient();
-    console.log("new dynamoDB instance created");
-  }
-}
+const getRuntime = require("./runtime").getRuntime;
+const init = require("./runtime").init;
 
 module.exports.create = async (event, context) => {
   await init();
+  const { conf } = getRuntime();
+
   const authToken = event.queryStringParameters.authToken;
 
   if (authToken !== conf.get("authToken")) {
@@ -102,8 +58,8 @@ module.exports.create = async (event, context) => {
 
   if (!gps.latitude || !gps.longitude) return;
 
-  await geoFencing(header.deviceId, gps, body.timestamp).catch(err => console.log(`error: genFencing(): ${err.stack}`));
-  // await saveRecord(params);
+  await geoFencing(header.deviceId, gps, body.timestamp).catch(err => console.log("error: genFencing(): ", err));
+  await saveRecord(params);
   return {
     statusCode: 200,
     body: JSON.stringify({ result: "Item Added Successfully" })
@@ -112,6 +68,8 @@ module.exports.create = async (event, context) => {
 
 async function geoFencing(deviceId, location, timestamp) {
   // todo: handle the case of gps drifting?
+  const { dynamoDb } = getRuntime();
+
   let lastEvent = await dynamoDb
     .query({
       TableName: "geofencing",
@@ -156,6 +114,9 @@ async function checkLeaveEvent(deviceId, location, lastEventLocation, timestamp)
 
 async function checkEnterEvent(deviceId, location, timestamp) {
   console.log("checkEnterEvent()", deviceId, location, timestamp);
+
+  const { geoLocations } = getRuntime();
+
   await Promise.map(
     geoLocations,
     async geolocation => {
@@ -175,31 +136,42 @@ async function checkEnterEvent(deviceId, location, timestamp) {
 }
 
 function getGeoLocation(label) {
+  const { geoLocations } = getRuntime();
+
   return _.find(geoLocations, { label });
 }
 
 async function createGeofencingEvent(deviceId, location, type, timestamp) {
   console.log(`createGeofencingEvent(): ${deviceId}, ${location}, ${type}, ${timestamp}`);
-  // await saveRecord({
-  //   TableName: "geofencing",
-  //   Item: {
-  //     deviceId: deviceId,
-  //     location: location,
-  //     type: type,
-  //     timestamp: timestamp
-  //   }
-  // });
-  await updateArrivalTime(deviceId, location, type, timestamp);
+
+  await saveRecord({
+    TableName: "geofencing",
+    Item: {
+      deviceId: deviceId,
+      location: location,
+      type: type,
+      timestamp: timestamp
+    }
+  });
+
+  if (type === "leave") {
+    await updateArrivalTime(deviceId, location, type, timestamp);
+  }
 }
 
 async function updateArrivalTime(deviceId, location, type, timestamp) {
   console.log(`updateArrivalTime(): ${deviceId}, ${location}, ${type}, ${timestamp}`);
-  const googleMapsClient = require("@google/maps").createClient({
+
+  const { conf } = getRuntime();
+
+  const googleMapsClient = GoogleMaps.createClient({
     key: conf.get("googleApiKey"),
     Promise: Promise
   });
 
   console.log("fetching arrival times");
+
+  const { geoLocations } = getRuntime();
 
   const candidates = geoLocations;
 
@@ -244,5 +216,6 @@ async function updateArrivalTime(deviceId, location, type, timestamp) {
 }
 
 async function saveRecord(params) {
+  const { dynamoDb } = getRuntime();
   await dynamoDb.put(params).promise();
 }

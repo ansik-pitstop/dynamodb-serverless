@@ -1,14 +1,14 @@
 "use strict";
 
-const Promise = require("bluebird");
-const AWS = require("aws-sdk");
 const _ = require("lodash");
 
-AWS.config.setPromisesDependency(Promise);
-
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const getRuntime = require("./runtime").getRuntime;
+const init = require("./runtime").init;
 
 module.exports.getArrivalTime = async event => {
+  await init();
+  const { dynamoDb } = getRuntime();
+
   const deviceIdParam = event.queryStringParameters.deviceId;
 
   const data = await dynamoDb

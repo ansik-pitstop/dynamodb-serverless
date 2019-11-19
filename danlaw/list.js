@@ -1,12 +1,13 @@
 "use strict";
 
-const Promise = require("bluebird");
-const AWS = require("aws-sdk");
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
-
-AWS.config.setPromisesDependency(Promise);
+const getRuntime = require("./runtime").getRuntime;
+const init = require("./runtime").init;
 
 module.exports.list = async event => {
+  await init();
+
+  const { dynamoDb } = getRuntime();
+
   const deviceIdParam = event.queryStringParameters.deviceId;
 
   const queryResult = await Promise.all([
@@ -32,6 +33,7 @@ module.exports.list = async event => {
     dynamoDb
       .query({
         TableName: "geofencing",
+        Region: "us-east-1",
         ProjectionExpression: "#deviceId, #location, #type, #timest",
         KeyConditionExpression: "#deviceId = :partitionval",
         ExpressionAttributeNames: {

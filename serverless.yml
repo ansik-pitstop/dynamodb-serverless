@@ -21,7 +21,15 @@ provider:
   name: aws
   runtime: nodejs10.x
   stage: production
-  region: us-east-1
+  region: us-east-2
+  vpc:
+    securityGroupIds:
+      - sg-339edb5b
+      - sg-fb22b693
+    subnetIds:
+      - subnet-07c23c17b49c0631e
+      - subnet-0e8430fc94fa50f08
+      - subnet-016dcbe672f4a6f9f
   memorySize: 128
   iamRoleStatements:
     - Effect: Allow
@@ -33,7 +41,6 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:DeleteItem
       Resource: "arn:aws:dynamodb:*:*:*"
-
 functions:
   getTrackingEvents:
     environment:
