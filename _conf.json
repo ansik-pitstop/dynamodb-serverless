@@ -1,8 +1,0 @@
-{
-  "authToken": "A41vqMEgpezEIdHh9ePCIBlGeXoYL1lu",
-  "geolocationUrl": "https://pitstop-ikea-bus-tracking.s3.amazonaws.com/geo.json",
-  "aws": {
-    "region": "us-east-1"
-  },
-  "googleApiKey": "AIzaSyDFBgpOdy021aUVkpCS_kkFoBremwgZQHY"
-}
