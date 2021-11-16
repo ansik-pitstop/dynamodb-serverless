@@ -12,7 +12,7 @@
   "dependencies": {
     "@ansik/sdk": "0.0.24",
     "@google/maps": "^0.5.5",
-    "aws-sdk": "^2.320.0",
+    "aws-sdk": "^2.814.0",
     "axios": "^0.19.0",
     "bluebird": "^3.5.3",
     "geolib": "^3.0.4",
